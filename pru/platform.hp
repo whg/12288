@@ -1,0 +1,19 @@
+#define PRU0_R31_VEC_VALID 32
+#define PRU_EVTOUT_0 3
+#define DATA_BLOCK_PTR C28
+#define CTPPR_0 0x22028
+
+#define GPIO1 0x4804c000 // GPIO Bank 1, See the AM335x TRM, Table 2-2 Peripheral Map
+#define GPIO_CLRDATAOUT 0x190
+#define GPIO_SETDATAOUT 0x194
+
+#define GPIO1_SET_REG r24
+#define GPIO1_CLR_REG r25
+
+#define WRITE_GPIO1(value, bit_index, gpio1_bit)	\
+	QBBC	GPIO1_CLR##bit_index, value, bit_index;	\
+	SET		GPIO1_SET_REG, gpio1_bit; 				\
+	QBA		GPIO1_END##bit_index;					\
+GPIO1_CLR##bit_index:;								\
+	SET		GPIO1_CLR_REG, gpio1_bit; 				\
+GPIO1_END##bit_index:;

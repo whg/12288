@@ -1,0 +1,35 @@
+.macro DELAY
+.mparam label, count
+	MOV		r0, count
+label:
+	SUB		r0, r0, 1
+	QBNE	label, r0, 0
+.endm
+
+.macro MULT
+.mparam a, b, out
+	LDI		r25, 0
+	XOUT	0, r25, 1
+	MOV		r28, a
+	MOV		r29, b
+	MOV		r26, 0 // nop
+	XIN		0, r26, 4
+	MOV		out, r26
+.endm
+
+.macro ENABLE_OCP_MASTER_PORT
+	LBCO	r0, C4, 4, 4
+	CLR		r0, 4
+	SBCO	r0, C4, 4, 4
+.endm
+
+.macro SET_RAM_BLOCK_PTR
+.mparam p
+	LDI		r0, p
+	MOV		r1, CTPPR_0
+	SBBO	r0, r1, 0, 4
+.endm
+
+.macro RESET_RAM_BLOCK_PTR
+	SET_RAM_BLOCK_PTR 0
+.endm
