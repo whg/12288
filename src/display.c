@@ -8,7 +8,7 @@
 
 struct {
 	pixel_t *ptr;
-	uint32_t addr;
+	uint16_t addr, offset;
 } buffers[NUM_BUFFERS];
 size_t write_index = 0, read_index = 1;
 uint32_t block_columns = 1, block_rows = 1;
@@ -20,28 +20,27 @@ void display_configure(uint32_t columns, uint32_t rows) {
 	buffer_length = SEGMENTS_IN_BLOCK * block_rows * block_columns * sizeof(pixel_t);
 }
 
-void display_set_buffer(size_t num, pixel_t *ptr, uint32_t addr) {
+void display_set_buffer(size_t num, pixel_t *ptr, uint16_t addr, uint16_t offset) {
 	if (num < NUM_BUFFERS) {
 		buffers[num].ptr = ptr;
 		buffers[num].addr = addr;
+		buffers[num].offset = offset;
 	}
 }
 
-pixel_t* display_read_data() {
-	return buffers[read_index].ptr;
-}
+#define define_getter(prop, read_write, return_type) \
+	return_type display_##read_write##_##prop() {	 \
+		return buffers[read_write##_index].prop;	 \
+	}
 
-pixel_t* display_write_data() {
-	return buffers[write_index].ptr;
-}
+#define define_read_write_getter(prop, return_type) \
+	define_getter(prop, read, return_type)			\
+	define_getter(prop, write, return_type)			\
 
-uint32_t display_read_addr() {
-	return buffers[read_index].addr;
-}
+define_read_write_getter(ptr, pixel_t*)
+define_read_write_getter(addr, uint16_t)
+define_read_write_getter(offset, uint16_t)
 
-uint32_t display_write_addr() {
-	return buffers[write_index].addr;
-}
 
 void display_swap_buffers() {
 	size_t _write_index = write_index;
@@ -49,70 +48,19 @@ void display_swap_buffers() {
 	read_index = _write_index;
 }
 
-void display_clear() {
-	pixel_t *data = display_write_data();
+pixel_t* display_clear() {
+	pixel_t *data = display_write_ptr();
+	printf("clearing %d\n", buffer_length);
 	memset(data, 0, buffer_length);
+	return data;
 }
 
 
 void display_debug() {
-  /* pixel_t *ptr = display_write_data(); */
-  /* uint8_t value = 255; */
-  /* for (int i = 0; i < 1; i++) { */
-  /*   *ptr = 255; */
-  /*   ptr++; */
-  /* } */
-  //ptr[DATA_LEN - 8] = 255;
-
-
-  /* for (int i = 0; i < ROW_LEN * COMMON_OUTPUTS; i++) { */
-  /*   //\*ptr = value--;// * (i % 2); */
-  /*   *ptr = 255; */
-  /*   ptr += STRIDE; */
-  /* } */
-
-  /* ptr = display_write_data(); */
-  /* int index; */
-  /* for (int i = 0; i < 20; i++) { */
-  /*   index = (ROW_LEN - 1) * STRIDE - (STRIDE * i * 2); */
-  /*   ptr[index] = 127; */
-  /* } */
-
-  /* for (int i = 0; i < 256; i++) { */
-  /*   //    ptr[i * STRIDE * 8] = 255; */
-  /*   ptr[i * STRIDE] = i; */
-  /* } */
-
-  /* index = (ROW_LEN - 1) * STRIDE; */
-  /* ptr[index] = 255; */
-
-
-  /* for (int i = 0; i < ROW_LEN * COMMON_OUTPUTS ; i++) { */
-  /*   //    *ptr = value--;// * (i % 2); */
-  /*   //    *ptr = 255; //i * 4 % 255; //i % 16; */
-  /*     *(ptr + 1) = 255; */
-  /*   ptr += STRIDE;// * (i % 5); */
-  /* } */
-
-
-  /* for (int i = 0; i < ROW_LEN * COMMON_OUTPUTS; i++) { */
-  /*   *ptr = 0; //i % 16; */
-  /*   ptr+= STRIDE; */
-  /* } */
-
-
-  /* ptr = display_write_data(); */
-  /* uint32_t last = ((ROW_LEN) * STRIDE) * 10; //COMMON_OUTPUTS ; */
-  /* last = ROW_LEN * COMMON_OUTPUTS * STRIDE - 8; */
-  /* last -= ROW_LEN * 5 * STRIDE; */
-  /*   //  ptr[(last - STRIDE)] = 255; */
-  /* for (int i = 0; i < 16; i++) { */
-  /*   ptr[last + i * STRIDE] = 255; */
-  /* } */
-
-
-  //  ptr[0] = ptr[8] = 255;
-
-  //  ptr[(ROW_LEN - 1) * STRIDE - (STRIDE * 1)] = 0;
-
+	pixel_t *data = display_clear();
+	data[0] = 255;
+	for (int i = 0; i < 256; i+= 3) {
+		data[i] = i / 3 % 3 * 80 + 10;
+		printf("%d\n", data[i]);
+	}
 }

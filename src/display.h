@@ -6,17 +6,18 @@
 typedef uint8_t pixel_t;
 
 void display_configure(uint32_t columns, uint32_t rows);
-void display_set_buffer(size_t num, pixel_t *ptr, uint32_t offset);
+void display_set_buffer(size_t num, pixel_t *ptr, uint16_t addr, uint16_t offset);
 void display_swap_buffers();
 
-pixel_t* display_read_data();
-pixel_t* display_write_data();
+pixel_t* display_read_ptr();
+uint16_t display_read_addr();
+uint16_t display_read_offset();
 
-uint32_t display_read_addr();
-uint32_t display_write_addr();
+pixel_t* display_write_ptr();
+uint16_t display_write_addr();
+uint16_t display_write_offset();
 
-
-void display_clear();
+pixel_t* display_clear();
 
 void display_cleanup();
 

@@ -14,7 +14,7 @@
 
 typedef struct {
 	 uint8_t status, num_columns, num_rows, bit_depth;
-	 uint32_t buffer_addr;
+	 uint16_t buffer_addr, buffer_offset;
 	 uint32_t enable_ticks;
 	 uint32_t scratch;
 } __attribute__((__packed__)) pru_ram_data_t;
@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
   options_t options = {
     .num_columns = 1,
     .num_rows = 1,
+	.bit_depth = 8,
     .enable_ticks = 250,
 	.quiet = 0,
   };
@@ -89,16 +90,31 @@ int main(int argc, char *argv[]) {
   prussdrv_map_prumem(PRUSS0_SHARED_DATARAM, (void**) &shared_ram);
 
   uint32_t ram0_offset = sizeof(pru_ram_data_t);
-  display_set_buffer(0, ((uint8_t*) pru_ram) + ram0_offset, ram0_offset);
-  display_set_buffer(1, shared_ram, 0x100);
+  display_set_buffer(0, ((uint8_t*) pru_ram) + ram0_offset, 0, ram0_offset);
+  display_set_buffer(1, shared_ram, 0x100, 0);
 
   pru_ram->status = 0;
   pru_ram->num_columns = options.num_columns;
   pru_ram->num_rows = options.num_rows;
   pru_ram->bit_depth = options.bit_depth;
   pru_ram->buffer_addr = display_read_addr();
+  pru_ram->enable_ticks = options.enable_ticks;
+  pru_ram->scratch = 0;
 
-  printf("offset = %u\n", pru_ram->buffer_addr);
+  display_configure(options.num_columns, options.num_rows);
+  display_debug();
+  display_swap_buffers();
+
+  pru_ram->buffer_addr = display_read_addr();
+  pru_ram->buffer_offset = display_read_offset();
+
+  pixel_t *data = display_read_ptr();
+  for (int i = 0; i < 8; i++) {
+	   printf("%d, ", data[i]);
+  }
+  printf("\n");
+
+  printf("offset = %u, %d\n", pru_ram->buffer_addr, ram0_offset);
 
   int exec_fail = prussdrv_exec_program(PRU0, "./build/segment-block.bin");
   if (exec_fail) {

@@ -25,7 +25,7 @@ label:
 
 .macro SET_RAM_BLOCK_PTR
 .mparam p
-	LDI		r0, p
+	MOV		r0, p
 	MOV		r1, CTPPR_0
 	SBBO	r0, r1, 0, 4
 .endm

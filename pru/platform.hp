@@ -10,10 +10,25 @@
 #define GPIO1_SET_REG r24
 #define GPIO1_CLR_REG r25
 
-#define WRITE_GPIO1(value, bit_index, gpio1_bit)	\
-	QBBC	GPIO1_CLR##bit_index, value, bit_index;	\
-	SET		GPIO1_SET_REG, gpio1_bit; 				\
-	QBA		GPIO1_END##bit_index;					\
-GPIO1_CLR##bit_index:;								\
-	SET		GPIO1_CLR_REG, gpio1_bit; 				\
-GPIO1_END##bit_index:;
+.macro INIT_GPIO1
+	LDI     GPIO1_CLR_REG, 0
+	LDI     GPIO1_SET_REG, 0
+.endm
+
+.macro WRITE_GPIO1
+.mparam value, bit_index, gpio1_bit
+	QBBC	GPIO1_CLR, value, bit_index
+	SET		GPIO1_SET_REG, gpio1_bit
+	QBA		GPIO1_END
+GPIO1_CLR:
+	SET		GPIO1_CLR_REG, gpio1_bit
+GPIO1_END:
+.endm
+
+.macro COMMIT_GPIO1
+	MOV     r0, GPIO1 | GPIO_CLRDATAOUT
+    SBBO    GPIO1_CLR_REG, r0, 0, 4
+    MOV     r0, GPIO1 | GPIO_SETDATAOUT
+    SBBO    GPIO1_SET_REG, r0, 0, 4
+	DELAY 	D, 200
+.endm
