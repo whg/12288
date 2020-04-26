@@ -1,8 +1,8 @@
 #pragma once
 
-#define STATUS_OK 0
-#define STATUS_FAIL 1
-#define STATUS_NEW_FRAME 2
+#define STATUS_NONE 0
+#define STATUS_RENDER 1
+#define STATUS_EXIT 2
 
 #define BITS_IN_BLOCK 32
 #define COMMON_OUTPUTS 8

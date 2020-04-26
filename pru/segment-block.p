@@ -60,9 +60,17 @@ START:
 	MULT	num_columns, BITS_IN_BLOCK, bits_in_row
 
 	CLR		r30, LATCH_BIT
+	SET		r30, BLANK_BIT
+
+WAIT_FOR_FRAME:
+	LBCO	status, DATA_BLOCK_PTR, 0, 1
+	DELAY	START_WAIT, 1000
+	QBEQ	WAIT_FOR_FRAME, status, STATUS_NONE
 
 RENDER:
 	// store values here, we don't switch buffers mid BCM
+	RESET_RAM_BLOCK_PTR
+	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 	MOV		blk_addr0, read_buffer_addr
 	MOV		blk_offset0, read_buffer_offset
 	MOV		bcm_bit, 0
@@ -135,12 +143,11 @@ CSEL_DONE:
 	ADD		bcm_bit, bcm_bit, 1
 	QBGT	BCM_LOOP, bcm_bit, bit_depth
 
-
-
 RENDER_DONE:
-
-	QBA		RENDER
-
+	RESET_RAM_BLOCK_PTR
+	LBCO	status, DATA_BLOCK_PTR, 0, 1
+	QBEQ	RENDER, status, STATUS_RENDER
+	// QBA		RENDER
 	// MOV		blk_offset, blk_offset0
 	// MOV		blk_addr, blk_addr0
 	// SET_RAM_BLOCK_PTR blk_addr

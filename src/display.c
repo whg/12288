@@ -57,10 +57,15 @@ pixel_t* display_clear() {
 
 
 void display_debug() {
+	static size_t counter = 0;
 	pixel_t *data = display_clear();
-	data[0] = 255;
-	for (int i = 0; i < 256; i+= 3) {
-		data[i] = i / 3 % 3 * 80 + 10;
-		printf("%d\n", data[i]);
+
+	for (int i = 0; i < 256; i++) {
+		data[(i + counter) % 256] = i; //(i + counter) % 256;
 	}
+	counter = (counter + 1) % buffer_length;
+	/* data[0] = 255; */
+	/* for (int i = 0; i < 256; i+= 3) { */
+	/* 	data[i] = i / 3 % 3 * 80 + 10; */
+	/* } */
 }
