@@ -30,5 +30,5 @@ GPIO1_END:
     SBBO    GPIO1_CLR_REG, r0, 0, 4
     MOV     r0, GPIO1 | GPIO_SETDATAOUT
     SBBO    GPIO1_SET_REG, r0, 0, 4
-	DELAY 	D, 200
+	DELAY 	200
 .endm

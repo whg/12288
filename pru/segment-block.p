@@ -13,8 +13,6 @@
 #define scratch r21
 #define RAM_BITS_LENGTH 16
 
-#define STRIDE	num_rows
-
 #define CLK_BIT		7
 #define LATCH_BIT	3
 #define BLANK_BIT	2
@@ -54,6 +52,7 @@ DATA_END_##channel:
 .entrypoint START
 
 START:
+	ENABLE_OCP_MASTER_PORT
 	RESET_RAM_BLOCK_PTR
 	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 
@@ -64,25 +63,28 @@ START:
 
 WAIT_FOR_FRAME:
 	LBCO	status, DATA_BLOCK_PTR, 0, 1
-	DELAY	START_WAIT, 1000
+	DELAY	65000
 	QBEQ	WAIT_FOR_FRAME, status, STATUS_NONE
 
-RENDER:
+LOAD_FRAME:
 	// store values here, we don't switch buffers mid BCM
 	RESET_RAM_BLOCK_PTR
 	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 	MOV		blk_addr0, read_buffer_addr
 	MOV		blk_offset0, read_buffer_offset
+
+RENDER:
 	MOV		bcm_bit, 0
 
 BCM_LOOP:
  	MOV		blk_offset, blk_offset0
 	MOV		blk_addr, blk_addr0
 	SET_RAM_BLOCK_PTR blk_addr
-
+	DELAY	60
 	MOV		enable_ticks, enable_ticks0
 	LSL		enable_ticks, enable_ticks, bcm_bit
 	MOV		csel_counter, 0
+
 
 ROW_LOOP:
 	MOV		bit_counter, 0
@@ -94,27 +96,26 @@ BIT_LOOP:
 	LBCO	r1, DATA_BLOCK_PTR, blk_offset, b0
 
 	WRITE_DATA (1, r1.b0, bcm_bit)
-	WRITE_DATA (2, r1.b0, bcm_bit)
-	WRITE_DATA (3, r1.b0, bcm_bit)
-	WRITE_DATA (4, r1.b0, bcm_bit)
-	WRITE_DATA (5, r1.b0, bcm_bit)
-	WRITE_DATA (6, r1.b0, bcm_bit)
+	WRITE_DATA (2, r1.b1, bcm_bit)
+	WRITE_DATA (3, r1.b2, bcm_bit)
+	WRITE_DATA (4, r1.b3, bcm_bit)
+	WRITE_DATA (5, r2.b0, bcm_bit)
+	WRITE_DATA (6, r2.b1, bcm_bit)
 
 	SET		r30, CLK_BIT
-	DELAY	CLK_DELAY, 10
-
+	DELAY	3
 	ADD		scratch, scratch, 1
 
-	ADD		blk_offset, blk_offset, STRIDE
+	ADD		blk_offset, blk_offset, num_rows
 	QBLT	INCREMENT_BLOCK, blk_offset, 255
-	//	delay?
+	// delay?
 	QBA		CONTINUE_BIT
 
 INCREMENT_BLOCK:
 	ADD		blk_addr, blk_addr, 1
 	SET_RAM_BLOCK_PTR blk_addr
 	AND		blk_offset, blk_offset, 255
-
+	DELAY	100
 CONTINUE_BIT:
 	ADD		bit_counter, bit_counter, 1
 	QBGT	BIT_LOOP, bit_counter, bits_in_row
@@ -129,12 +130,11 @@ ROW_DONE:
 	COMMIT_GPIO1
 
 	SET		r30, LATCH_BIT
-	DELAY	LATCH_DELAY, 3
+	DELAY	3
 	CLR		r30, LATCH_BIT
 
 	CLR		r30, BLANK_BIT
-	DELAY	ENABLE, enable_ticks
-//	SET		r30, BLANK_BIT
+	DELAY	enable_ticks
 
 	ADD		csel_counter, csel_counter, 1
 	QBGT	ROW_LOOP, csel_counter, COMMON_OUTPUTS
@@ -146,19 +146,14 @@ CSEL_DONE:
 RENDER_DONE:
 	RESET_RAM_BLOCK_PTR
 	LBCO	status, DATA_BLOCK_PTR, 0, 1
+	QBEQ	LOAD_FRAME, status, STATUS_NEW_FRAME
 	QBEQ	RENDER, status, STATUS_RENDER
-	// QBA		RENDER
-	// MOV		blk_offset, blk_offset0
-	// MOV		blk_addr, blk_addr0
-	// SET_RAM_BLOCK_PTR blk_addr
 
-	// MOV		r0, 5 //num_rows
-	// LBCO	r1, DATA_BLOCK_PTR, blk_offset, b0
+//	MOV		scratch, bit_counter
+	DELAY	100
 
-	MOV		scratch, r2.b0
-	DELAY	OFF, 100
-
-	SET		r30, BLANK_BIT
+//	SET		r30, BLANK_BIT
+	CLR		r30, BLANK_BIT
 
 	RESET_RAM_BLOCK_PTR
 	SBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
