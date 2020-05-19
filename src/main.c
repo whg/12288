@@ -10,8 +10,9 @@
 #include <pruss_intc_mapping.h>
 
 #include "util.h"
-#include "display.h"
 #include "common.h"
+#include "display.h"
+#include "renderer.h"
 
 typedef struct {
 	 uint8_t status, num_columns, num_rows, bit_depth;
@@ -61,10 +62,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 	 return 0;
 }
 
-pru_ram_data_t *pru_ram;
+pru_ram_data_t *g_pru_ram;
 
 void stop() {
-	 pru_ram->status = STATUS_EXIT;
+	 g_pru_ram->status = STATUS_EXIT;
+	 renderer_stop();
 }
 
 int main(int argc, char *argv[]) {
@@ -97,21 +99,21 @@ int main(int argc, char *argv[]) {
 
 	 pixel_t *shared_ram;
 
-	 //	 prussdrv_map_prumem(PRUSS0_PRU1_DATARAM, (void**) &pru_ram); // side effects only
-	 prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, (void**) &pru_ram);
+	 //	 prussdrv_map_prumem(PRUSS0_PRU1_DATARAM, (void**) &g_pru_ram); // side effects only
+	 prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, (void**) &g_pru_ram);
 	 prussdrv_map_prumem(PRUSS0_SHARED_DATARAM, (void**) &shared_ram);
 
 	 uint32_t ram0_offset = sizeof(pru_ram_data_t);
-	 display_set_buffer(0, ((uint8_t*) pru_ram) + ram0_offset, 0, ram0_offset);
+	 display_set_buffer(0, ((uint8_t*) g_pru_ram) + ram0_offset, 0, ram0_offset);
 	 display_set_buffer(1, shared_ram, 0x100, 0);
 
-	 pru_ram->status = STATUS_NONE;
-	 pru_ram->num_columns = options.num_columns;
-	 pru_ram->num_rows = options.num_rows;
-	 pru_ram->bit_depth = options.bit_depth;
-	 pru_ram->buffer_addr = display_read_addr();
-	 pru_ram->enable_ticks = options.enable_ticks;
-	 pru_ram->scratch = 0;
+	 g_pru_ram->status = STATUS_NONE;
+	 g_pru_ram->num_columns = options.num_columns;
+	 g_pru_ram->num_rows = options.num_rows;
+	 g_pru_ram->bit_depth = options.bit_depth;
+	 g_pru_ram->buffer_addr = display_read_addr();
+	 g_pru_ram->enable_ticks = options.enable_ticks;
+	 g_pru_ram->scratch = 0;
 
 	 display_configure(options.num_columns, options.num_rows);
 	 display_debug();
@@ -119,8 +121,8 @@ int main(int argc, char *argv[]) {
 	 display_debug();
 	 display_swap_buffers();
 
-	 pru_ram->buffer_addr = display_read_addr();
-	 pru_ram->buffer_offset = display_read_offset();
+	 g_pru_ram->buffer_addr = display_read_addr();
+	 g_pru_ram->buffer_offset = display_read_offset();
 
 	 pixel_t *data = display_read_ptr();
 	 for (int i = 0; i < 8; i++) {
@@ -128,27 +130,35 @@ int main(int argc, char *argv[]) {
 	 }
 	 printf("\n");
 
-	 printf("offset = %u, %d\n", pru_ram->buffer_addr, pru_ram->buffer_offset);
-
+	 printf("offset = %u, %d\n", g_pru_ram->buffer_addr, g_pru_ram->buffer_offset);
+	 puts("starting");
 	 int exec_fail = prussdrv_exec_program(PRU0, "./build/segment-block.bin");
 	 if (exec_fail) {
-		  die("can't exec pru program");
+		 puts("dd");
+		 die("can't exec pru program");
 	 }
 
+	 puts("initing");
+	 renderer_init(options.num_columns, options.num_rows);
+	 puts("inited");
 
 	 static int frame_num = 0;
-	 pru_ram->status = STATUS_RENDER;
-	 while (pru_ram->status != STATUS_EXIT) {
-		 display_debug();
-		 display_swap_buffers();
-		 pru_ram->buffer_addr = display_read_addr();
-		 pru_ram->buffer_offset = display_read_offset();
-		 pru_ram->status = STATUS_NEW_FRAME;
-		 usleep(1000000 / 3);
+	 g_pru_ram->status = STATUS_RENDER;
+	 while (g_pru_ram->status != STATUS_EXIT) {
+		 uint8_t *buffer = display_write_ptr();
+		 puts("waiting for frame");
+		 renderer_status_t status = renderer_write_frame(buffer);
+		 if (status == RENDERER_NEW_FRAME) {
+			 display_swap_buffers();
+			 g_pru_ram->buffer_addr = display_read_addr();
+			 g_pru_ram->buffer_offset = display_read_offset();
+			 g_pru_ram->status = STATUS_NEW_FRAME;
+		 }
+		 /* usleep(1000000 / 3); */
 		 printf("%d\n", ++frame_num);
 	 }
 
-	 pru_ram->status = STATUS_EXIT;
+	 g_pru_ram->status = STATUS_EXIT;
 	 usleep(1000000 / 200);
 
 	 printf("waiting to halt\n");
@@ -156,11 +166,12 @@ int main(int argc, char *argv[]) {
 	 prussdrv_pru_clear_event(PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
 
 
-	 printf("scratch = %u\n", pru_ram->scratch);
+	 printf("scratch = %u\n", g_pru_ram->scratch);
 
 	 prussdrv_pru_disable(PRU0);
 	 //	 prussdrv_pru_disable(PRU1);
 	 prussdrv_exit();
+	 renderer_close();
 
 	 return EXIT_SUCCESS;
 }
