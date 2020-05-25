@@ -74,10 +74,10 @@ int main(int argc, char *argv[]) {
 	 signal(SIGINT, stop);
 
 	 options_t options = {
-		  .num_columns = 1,
-		  .num_rows = 1,
+		  .num_columns = 8,
+		  .num_rows = 6,
 		  .bit_depth = 8,
-		  .enable_ticks = 250,
+		  .enable_ticks = 3000,
 		  .quiet = 0,
 	 };
 
@@ -90,16 +90,16 @@ int main(int argc, char *argv[]) {
 		  die("prussdrv_open failed");
 	 }
 
-	 /* if (prussdrv_pru_enable(PRU0) || prussdrv_pru_enable(PRU1)) { */
-	 /*   die("pru enable failed"); */
-	 /* } */
+	 if (prussdrv_pru_enable(PRU0) || prussdrv_pru_enable(PRU1)) {
+	   die("pru enable failed");
+	 }
 
 	 tpruss_intc_initdata pruss_init_data = PRUSS_INTC_INITDATA;
 	 prussdrv_pruintc_init(&pruss_init_data);
 
 	 pixel_t *shared_ram;
 
-	 //	 prussdrv_map_prumem(PRUSS0_PRU1_DATARAM, (void**) &g_pru_ram); // side effects only
+	 	 prussdrv_map_prumem(PRUSS0_PRU1_DATARAM, (void**) &g_pru_ram); // side effects only?
 	 prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, (void**) &g_pru_ram);
 	 prussdrv_map_prumem(PRUSS0_SHARED_DATARAM, (void**) &shared_ram);
 
@@ -116,46 +116,43 @@ int main(int argc, char *argv[]) {
 	 g_pru_ram->scratch = 0;
 
 	 display_configure(options.num_columns, options.num_rows);
-	 display_debug();
-	 display_swap_buffers();
-	 display_debug();
-	 display_swap_buffers();
+	 display_use_buffer(1);
 
 	 g_pru_ram->buffer_addr = display_read_addr();
 	 g_pru_ram->buffer_offset = display_read_offset();
 
-	 pixel_t *data = display_read_ptr();
-	 for (int i = 0; i < 8; i++) {
-		  printf("%d, ", data[i]);
-	 }
-	 printf("\n");
-
-	 printf("offset = %u, %d\n", g_pru_ram->buffer_addr, g_pru_ram->buffer_offset);
-	 puts("starting");
 	 int exec_fail = prussdrv_exec_program(PRU0, "./build/segment-block.bin");
 	 if (exec_fail) {
-		 puts("dd");
 		 die("can't exec pru program");
 	 }
 
-	 puts("initing");
 	 renderer_init(options.num_columns, options.num_rows);
-	 puts("inited");
+	 printf("rendering config: (%d, %d), %u enable ticks, %d bit depth\n",
+		  options.num_columns, options.num_rows,
+		  g_pru_ram->enable_ticks, (int) g_pru_ram->bit_depth);
 
 	 static int frame_num = 0;
-	 g_pru_ram->status = STATUS_RENDER;
 	 while (g_pru_ram->status != STATUS_EXIT) {
 		 uint8_t *buffer = display_write_ptr();
 		 puts("waiting for frame");
 		 renderer_status_t status = renderer_write_frame(buffer);
 		 if (status == RENDERER_NEW_FRAME) {
-			 display_swap_buffers();
+			 /* display_swap_buffers(); */
 			 g_pru_ram->buffer_addr = display_read_addr();
 			 g_pru_ram->buffer_offset = display_read_offset();
 			 g_pru_ram->status = STATUS_NEW_FRAME;
 		 }
-		 /* usleep(1000000 / 3); */
+		 else if (status == RENDERER_BIT_DEPTH) {
+			 g_pru_ram->bit_depth = (uint8_t)renderer_get_value();
+			 printf("set bit depth to %d\n", (int) g_pru_ram->bit_depth);
+		 }
+		 else if (status == RENDERER_ENABLE_TICKS) {
+			 g_pru_ram->enable_ticks = renderer_get_value();
+			 printf("set enable ticks to %u\n", (int) g_pru_ram->enable_ticks);
+		 }
+		 //	 usleep(1000000 / 3);
 		 printf("%d\n", ++frame_num);
+		 //		 stop();
 	 }
 
 	 g_pru_ram->status = STATUS_EXIT;
@@ -169,7 +166,7 @@ int main(int argc, char *argv[]) {
 	 printf("scratch = %u\n", g_pru_ram->scratch);
 
 	 prussdrv_pru_disable(PRU0);
-	 //	 prussdrv_pru_disable(PRU1);
+	 prussdrv_pru_disable(PRU1);
 	 prussdrv_exit();
 	 renderer_close();
 

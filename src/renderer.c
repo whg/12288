@@ -23,6 +23,8 @@ static pthread_cond_t g_condv = PTHREAD_COND_INITIALIZER;
 static uint8_t *g_data;
 static bool g_alive = true;
 static int g_rows, g_cols;
+static renderer_status_t g_status = RENDERER_NONE;
+static uint32_t g_value;
 
 static void* network_thread(void *_);
 
@@ -53,6 +55,8 @@ void renderer_init(int cols, int rows) {
     int r = pthread_create(&g_network_thread, NULL, &network_thread, NULL);
 	if (r != 0)
 		die("can't create renderer thread");
+
+	printf("listening on port %d\n", PORT);
 }
 
 static void* network_thread(void *_) {
@@ -66,17 +70,32 @@ static void* network_thread(void *_) {
 				die("recv error");
 
 			printf("received %d bytes: %c\n", n, (char) buffer[0]);
-			bool ok = false;
-		    if (buffer[0] == 'D') {
-				int rows = buffer[1];
-				int cols = buffer[2];
-				if (rows == g_rows && cols == g_cols) {
-					memcpy(g_data, buffer + 3, rows * cols * SEGMENTS_IN_BLOCK);
+			bool ok = true;
+			switch (buffer[0]) {
+			case 'D':
+				if (buffer[2] == g_rows && buffer[1] == g_cols) {
+					memcpy(g_data, buffer + 3, g_rows * g_cols * SEGMENTS_IN_BLOCK);
 					puts("writing data");
-					ok = true;
+					g_status = RENDERER_NEW_FRAME;
+				} else {
+					printf("size mismatch %d %d, %d, %d\n",
+						   (int) buffer[2], g_rows, (int) buffer[1], g_cols);
+					ok = false;
 				}
-			}
+				break;
+			case 'B':
+				g_value = buffer[1];
+				g_status = RENDERER_BIT_DEPTH;
+				break;
+			case 'E':
+				g_value = ((uint32_t) buffer[2]) << 8 | buffer[1];
+				g_status = RENDERER_ENABLE_TICKS;
+				break;
 
+			default:
+				ok = false;
+			}
+				
 			if (ok)
 				pthread_cond_signal(&g_condv);
 		}
@@ -95,7 +114,11 @@ renderer_status_t renderer_write_frame(uint8_t *data) {
 	pthread_mutex_lock(&g_mutex);
 	pthread_cond_wait(&g_condv, &g_mutex);
 	pthread_mutex_unlock(&g_mutex);
-	return g_alive ? RENDERER_NEW_FRAME : RENDERER_NONE;
+	return g_alive ? g_status : RENDERER_NONE;
+}
+
+uint32_t renderer_get_value() {
+	return g_value;
 }
 
 void renderer_stop() {

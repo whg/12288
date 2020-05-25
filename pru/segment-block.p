@@ -83,6 +83,8 @@ BCM_LOOP:
 	DELAY	60
 	MOV		enable_ticks, enable_ticks0
 	LSL		enable_ticks, enable_ticks, bcm_bit
+	SUB		enable_ticks, enable_ticks, enable_ticks0
+	ADD		enable_ticks, enable_ticks, 1
 	MOV		csel_counter, 0
 
 
@@ -103,8 +105,6 @@ BIT_LOOP:
 	WRITE_DATA (6, r2.b1, bcm_bit)
 
 	SET		r30, CLK_BIT
-	DELAY	3
-	ADD		scratch, scratch, 1
 
 	ADD		blk_offset, blk_offset, num_rows
 	QBLT	INCREMENT_BLOCK, blk_offset, 255
@@ -135,7 +135,7 @@ ROW_DONE:
 
 	CLR		r30, BLANK_BIT
 	DELAY	enable_ticks
-
+	
 	ADD		csel_counter, csel_counter, 1
 	QBGT	ROW_LOOP, csel_counter, COMMON_OUTPUTS
 
@@ -143,17 +143,18 @@ CSEL_DONE:
 	ADD		bcm_bit, bcm_bit, 1
 	QBGT	BCM_LOOP, bcm_bit, bit_depth
 
+
 RENDER_DONE:
 	RESET_RAM_BLOCK_PTR
 	LBCO	status, DATA_BLOCK_PTR, 0, 1
 	QBEQ	LOAD_FRAME, status, STATUS_NEW_FRAME
 	QBEQ	RENDER, status, STATUS_RENDER
 
-//	MOV		scratch, bit_counter
+//	MOV		scratch, 
 	DELAY	100
 
-//	SET		r30, BLANK_BIT
-	CLR		r30, BLANK_BIT
+	SET		r30, BLANK_BIT
+//	CLR		r30, BLANK_BIT
 
 	RESET_RAM_BLOCK_PTR
 	SBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH

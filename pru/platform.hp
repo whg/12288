@@ -26,9 +26,9 @@ GPIO1_END:
 .endm
 
 .macro COMMIT_GPIO1
-	MOV     r0, GPIO1 | GPIO_CLRDATAOUT
+       MOV     r0, GPIO1 | GPIO_CLRDATAOUT
     SBBO    GPIO1_CLR_REG, r0, 0, 4
     MOV     r0, GPIO1 | GPIO_SETDATAOUT
     SBBO    GPIO1_SET_REG, r0, 0, 4
-	DELAY 	200
+    DELAY   50
 .endm

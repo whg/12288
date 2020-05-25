@@ -48,6 +48,11 @@ void display_swap_buffers() {
 	read_index = _write_index;
 }
 
+void display_use_buffer(size_t num) {
+  write_index = num;
+  read_index = num;
+}
+
 pixel_t* display_clear() {
 	pixel_t *data = display_write_ptr();
 	memset(data, 0, buffer_length);
@@ -74,26 +79,28 @@ void display_debug() {
 	size_t last = buffer_length;
 
 	//	counter = 5;
-	for (int i = 0; i < 32 * 8; i++) {
-	  if (i % 2) {
-	    int cc = counter;
-	    if (cc == 0) cc = 2;
-	    else if (cc == 2) cc = 0;
-	    else if (cc == 3) cc = 7;
-	    else if (cc == 4) cc = 6;
-	    else if (cc == 6) cc = 4;
-	    else if (cc == 7) cc = 3;
-	    for (int r = 0; r < 6; r++) {
-	      data[buffer_length - 1 - (r + 6 * cc) - 48 * i] = 1;
-	    }
-	  } else {
-	    for (int r = 0; r < 6; r++) {
-	      data[buffer_length - 1 - (r + 6 * counter) - 48 * i] = 1;
-	    }
-	  }
-	}
+	/* for (int i = 0; i < 32 * 8; i++) { */
+	/*   if (i % 2) { */
+	/*     int cc = counter; */
+	/*     if (cc == 0) cc = 2; */
+	/*     else if (cc == 2) cc = 0; */
+	/*     else if (cc == 3) cc = 7; */
+	/*     else if (cc == 4) cc = 6; */
+	/*     else if (cc == 6) cc = 4; */
+	/*     else if (cc == 7) cc = 3; */
+	/*     for (int r = 0; r < 6; r++) { */
+	/*       data[buffer_length - 1 - (r + 6 * cc) - 48 * i] = 1; */
+	/*     } */
+	/*   } else { */
+	/*     for (int r = 0; r < 6; r++) { */
+	/*       data[buffer_length - 1 - (r + 6 * counter) - 48 * i] = 1; */
+	/*     } */
+	/*   } */
+	/* } */
 
-	counter = (counter + 1) % 8;
+	data[buffer_length - 1 - 5] = counter;
+	
+	counter = (counter + 1) % 256;
 	return;
 
 	int repeat = 4;
