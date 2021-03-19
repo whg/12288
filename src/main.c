@@ -90,16 +90,16 @@ int main(int argc, char *argv[]) {
 		  die("prussdrv_open failed");
 	 }
 
-	 if (prussdrv_pru_enable(PRU0) || prussdrv_pru_enable(PRU1)) {
-	   die("pru enable failed");
-	 }
+	 /* if (prussdrv_pru_enable(PRU0) || prussdrv_pru_enable(PRU1)) { */
+	 /*   die("pru enable failed"); */
+	 /* } */
 
 	 tpruss_intc_initdata pruss_init_data = PRUSS_INTC_INITDATA;
 	 prussdrv_pruintc_init(&pruss_init_data);
 
 	 pixel_t *shared_ram;
 
-	 	 prussdrv_map_prumem(PRUSS0_PRU1_DATARAM, (void**) &g_pru_ram); // side effects only?
+	 /* prussdrv_map_prumem(PRUSS0_PRU1_DATARAM, (void**) &g_pru_ram); // side effects only? */
 	 prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, (void**) &g_pru_ram);
 	 prussdrv_map_prumem(PRUSS0_SHARED_DATARAM, (void**) &shared_ram);
 
@@ -155,8 +155,6 @@ int main(int argc, char *argv[]) {
 		 //		 stop();
 	 }
 
-	 g_pru_ram->status = STATUS_EXIT;
-	 usleep(1000000 / 200);
 
 	 printf("waiting to halt\n");
 	 prussdrv_pru_wait_event(PRU_EVTOUT_0);
@@ -165,8 +163,8 @@ int main(int argc, char *argv[]) {
 
 	 printf("scratch = %u\n", g_pru_ram->scratch);
 
-	 prussdrv_pru_disable(PRU0);
-	 prussdrv_pru_disable(PRU1);
+	 /* prussdrv_pru_disable(PRU0); */
+	 /* prussdrv_pru_disable(PRU1); */
 	 prussdrv_exit();
 	 renderer_close();
 

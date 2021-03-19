@@ -14,3 +14,7 @@ build/segment-block.bin: pru/segment-block.p
 clean:
 	rm build/segment-block.bin
 	rm src/*.o
+
+install:
+	sudo cp 12288.service /lib/systemd/system/
+	sudo systemctl enable 12288.service
