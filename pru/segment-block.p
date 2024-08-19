@@ -29,22 +29,40 @@
 #define CSEL1_GPIO1_BIT	9
 #define CSEL2_GPIO1_BIT	10
 
-#define WRITE_DATA(channel, value, bit) 	\
-	QBBC 	DATA_CLR_##channel, value, bit; \
-	SET	r30, DATA_##channel##_BIT; 			\
-	QBA	DATA_END_##channel;   				\
-DATA_CLR_##channel:; 						\
-	CLR	r30, DATA_##channel##_BIT; 			\
-	QBA	DATA_END_##channel; 				\
-DATA_END_##channel:
+// #define WRITE_DATA(channel, value, bit) 	\
+// 	QBBC 	DATA_CLR_##channel, value, bit; \
+// 	SET	r30, DATA_##channel##_BIT; 			\
+// 	QBA	DATA_END_##channel;   				\
+// DATA_CLR_##channel:; 						\
+// 	CLR	r30, DATA_##channel##_BIT; 			\
+// 	QBA	DATA_END_##channel; 				\
+// DATA_END_##channel:
 
-#define bit_counter		r17.w0
+#define WRITE_SEGMENT_COLUMN(reg, byte) 			\
+	CLR		r30, CLK_BIT; 				\
+	MOV		r0, r##reg.b##byte; 			\
+	QBBC		SET_CLK##reg##byte, r0, 7; 		\
+	SET		r0, DATA_2_BIT; 			\
+	QBA		WRITE_SEGMENT_COLUMN_DONE##reg##byte; 	\
+SET_CLK##reg##byte:; 						\
+	SET		r0, CLK_BIT; 				\
+WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 				\
+	MOV		r30, r0
+	
+#define WRITE_SEGMENT_COLUMN_REG(reg) 				\
+	WRITE_SEGMENT_COLUMN(reg, 0); 				\
+	WRITE_SEGMENT_COLUMN(reg, 1); 				\
+	WRITE_SEGMENT_COLUMN(reg, 2); 				\
+	WRITE_SEGMENT_COLUMN(reg, 3)
+
+	
+#define column_counter		r17.w0
 #define bits_in_row		r17.w2
 #define enable_ticks	r16
-#define blk_addr		r15
-#define blk_addr0		r14.w0
-#define blk_offset0		r14.w2
-#define blk_offset		r13.w0
+#define block_address		r15
+#define block_address0		r14.w0
+#define block_offset0		r14.w2
+#define block_offset		r13.w0
 #define bcm_bit			r13.b2
 #define csel_counter	r13.b3
 
@@ -71,16 +89,16 @@ LOAD_FRAME:
 	// store values here, we don't switch buffers mid BCM
 	RESET_RAM_BLOCK_PTR
 	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
-	MOV		blk_addr0, read_buffer_addr
-	MOV		blk_offset0, read_buffer_offset
+	MOV		block_address0, read_buffer_addr
+	MOV		block_offset0, read_buffer_offset
 
 RENDER:
 	MOV		bcm_bit, 0
 
 BCM_LOOP:
- 	MOV		blk_offset, blk_offset0
-	MOV		blk_addr, blk_addr0
-	SET_RAM_BLOCK_PTR blk_addr
+ 	MOV		block_offset, block_offset0
+	MOV		block_address, block_address0
+	SET_RAM_BLOCK_PTR block_address
 	DELAY	60
 	MOV		enable_ticks, enable_ticks0
 	LSL		enable_ticks, enable_ticks, bcm_bit
@@ -90,40 +108,38 @@ BCM_LOOP:
 
 
 ROW_LOOP:
-	MOV		bit_counter, 0
+	MOV		column_counter, 0
+	
+BLOCK_LOOP:	
+	LBCO		r1, DATA_BLOCK_PTR, block_offset, 32
 
 BIT_LOOP:
-	CLR		r30, CLK_BIT
+	WRITE_SEGMENT_COLUMN_REG(1)
+	WRITE_SEGMENT_COLUMN_REG(2)
+	WRITE_SEGMENT_COLUMN_REG(3)
+	WRITE_SEGMENT_COLUMN_REG(4)
+	WRITE_SEGMENT_COLUMN_REG(5)
+	WRITE_SEGMENT_COLUMN_REG(6)
+	WRITE_SEGMENT_COLUMN_REG(7)
+	WRITE_SEGMENT_COLUMN_REG(8)
 
-	MOV		r0.b0, num_rows
-	LBCO	r1, DATA_BLOCK_PTR, blk_offset, b0
-
-	WRITE_DATA (1, r1.b0, bcm_bit)
-	WRITE_DATA (2, r1.b1, bcm_bit)
-	WRITE_DATA (3, r1.b2, bcm_bit)
-	WRITE_DATA (4, r1.b3, bcm_bit)
-	WRITE_DATA (5, r2.b0, bcm_bit)
-	WRITE_DATA (6, r2.b1, bcm_bit)
-
-	SET		r30, CLK_BIT
-
-	ADD		blk_offset, blk_offset, num_rows
-	QBLT	INCREMENT_BLOCK, blk_offset, 255
-	// delay?
+	ADD		block_offset, block_offset, 32
+	QBLT		INCREMENT_BLOCK, block_offset, 255
 	QBA		CONTINUE_BIT
 
 INCREMENT_BLOCK:
-	ADD		blk_addr, blk_addr, 1
-	SET_RAM_BLOCK_PTR blk_addr
-	AND		blk_offset, blk_offset, 255
+	ADD		block_address, block_address, 1
+	SET_RAM_BLOCK_PTR block_address
+	AND		block_offset, block_offset, 255
 	DELAY	100
+
+
 CONTINUE_BIT:
-	ADD		bit_counter, bit_counter, 1
-	QBGT	BIT_LOOP, bit_counter, bits_in_row
+	ADD		column_counter, column_counter, 1
+	QBGT		BLOCK_LOOP, column_counter, num_columns
 
 ROW_DONE:
 	SET		r30, BLANK_BIT
-
 
 	INIT_GPIO1
 	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
