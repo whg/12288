@@ -37,9 +37,9 @@
 	QBA		WRITE_SEGMENT_COLUMN_DONE##reg##byte; 	\
 SET_CLK##reg##byte:; 						\
 	SET		r0, CLK_BIT; 				\
-	WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 			\
+WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 				\
 	MOV		r30, r0; 				\	
-	DELAY		1
+	NOP0		r0, r0, r0
 	
 #define WRITE_SEGMENT_COLUMN_REG(reg) 				\
 	WRITE_SEGMENT_COLUMN(reg, 0); 				\
@@ -82,39 +82,31 @@ LOAD_FRAME:
 	RAMBLK 	0
 	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 
-// 	MOV	bcm_bits_address, bcm_bits_buffer_addr
-// 	MOV	bcm_bits_offset, bcm_bits_buffer_offset
-	
-// 	RAMBLK 	bcm_bits_address
-// 	LBCO	r3, DATA_BLOCK_PTR, bcm_bits_offset, 8
-	
-// 	ADD	bcm_bits_offset, bcm_bits_offset, 8
-// 	QBLT	INCREMENT_BCM_BITS_ADDRESS, bcm_bits_offset, 0xff
-// 	QBA	NEXT_BLOCK
-
-// INCREMENT_BCM_BITS_ADDRESS:
-// 	ADD	bcm_bits_address, bcm_bits_address, 1
-// 	AND	bcm_bits_offset, bcm_bits_offset, 0xff
-
 RENDER:
-	MOV	bcm_bit_counter, 0
-
+	MOV	csel_counter, 0
 	
+CSEL_LOOP:
+	INIT_GPIO1
+	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
+	COMMIT_GPIO1
+	
+	MOV	bcm_bit_counter, 0
 	
  	LDI	block_offset, 0
 	LDI	block_address, 0x100
 	RAMBLK 	block_address
 	DELAY	60
+	
 BCM_LOOP:
 	MOV	enable_ticks, enable_ticks0
 	LSL	enable_ticks, enable_ticks, bcm_bit_counter
 	SUB	enable_ticks, enable_ticks, enable_ticks0
 	ADD	enable_ticks, enable_ticks, 1
-	MOV	csel_counter, 0
 
-
-ROW_LOOP:
 	MOV	column_counter, 0
+
 	
 BLOCK_LOOP:	
 	LBCO	r1, DATA_BLOCK_PTR, block_offset, 32
@@ -127,7 +119,6 @@ BLOCK_LOOP:
 	WRITE_SEGMENT_COLUMN_REG(6)
 	WRITE_SEGMENT_COLUMN_REG(7)
 	WRITE_SEGMENT_COLUMN_REG(8)
-
 	
 	ADD	block_offset, block_offset, 32
 	QBLT	INCREMENT_BLOCK, block_offset, 255
@@ -139,19 +130,12 @@ INCREMENT_BLOCK:
 	AND	block_offset, block_offset, 255
 	DELAY	100
 
-
 NEXT_BLOCK:
 	ADD	column_counter, column_counter, 1
 	QBGT	BLOCK_LOOP, column_counter, num_columns
 
 ROW_DONE:
 	SET	r30, BLANK_BIT
-
-	INIT_GPIO1
-	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
-	COMMIT_GPIO1
 
 	SET	r30, LATCH_BIT
 	DELAY	3
@@ -160,13 +144,12 @@ ROW_DONE:
 	CLR	r30, BLANK_BIT
 	DELAY	enable_ticks	
 	
-	ADD	csel_counter, csel_counter, 1
-	QBGT	ROW_LOOP, csel_counter, COMMON_OUTPUTS
-
-CSEL_DONE:
 	ADD	bcm_bit_counter, bcm_bit_counter, 1
 	QBGT	BCM_LOOP, bcm_bit_counter, bit_depth
-
+	
+BCM_DONE:
+	ADD	csel_counter, csel_counter, 1
+	QBGT	CSEL_LOOP, csel_counter, COMMON_OUTPUTS
 
 RENDER_DONE:
 	RAMBLK 0
@@ -174,28 +157,15 @@ RENDER_DONE:
 	QBEQ	LOAD_FRAME, status, STATUS_NEW_FRAME
 	QBEQ	RENDER, status, STATUS_RENDER
 
-	MOV		scratch, 0
+	RAMBLK 	0x3f
+	LBCO	r0, DATA_BLOCK_PTR, 252, 4
+	
+	MOV	scratch, r0
 	DELAY	100
 EXIT:	
-	SET		r30, BLANK_BIT
+	SET	r30, BLANK_BIT
 
-	LDI	csel_counter, 0
-	INIT_GPIO1
-	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
-	COMMIT_GPIO1
-	DELAY		100
-	LDI	csel_counter, 7
-	INIT_GPIO1
-	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
-	COMMIT_GPIO1
-
-//	CLR		r30, BLANK_BIT
-
-	RAMBLK 0
+	RAMBLK 	0
 	SBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 
 	DELAY	50000

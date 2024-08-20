@@ -116,6 +116,9 @@ int main(int argc, char *argv[]) {
 	 g_pru_ram->scratch = 0;
 
 	 memcpy(g_pru_ram + 0xff, scrambled_bcm_bits5, sizeof(scrambled_bcm_bits5));
+
+	 uint32_t *v = ((uint8_t *)g_pru_ram) + 0x1000 + 0x3000 - 4;
+	 *v = 1234;
 	 
 	 int exec_fail = prussdrv_exec_program(PRU0, "./build/segment-block.bin");
 	 if (exec_fail) {
