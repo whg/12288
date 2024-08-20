@@ -46,8 +46,9 @@
 	QBA		WRITE_SEGMENT_COLUMN_DONE##reg##byte; 	\
 SET_CLK##reg##byte:; 						\
 	SET		r0, CLK_BIT; 				\
-WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 				\
-	MOV		r30, r0
+	WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 			\
+	MOV		r30, r0; 				\	
+	DELAY		1
 	
 #define WRITE_SEGMENT_COLUMN_REG(reg) 				\
 	WRITE_SEGMENT_COLUMN(reg, 0); 				\
@@ -95,11 +96,11 @@ LOAD_FRAME:
 RENDER:
 	MOV		bcm_bit, 0
 
-BCM_LOOP:
  	MOV		block_offset, block_offset0
 	MOV		block_address, block_address0
 	SET_RAM_BLOCK_PTR block_address
 	DELAY	60
+BCM_LOOP:
 	MOV		enable_ticks, enable_ticks0
 	LSL		enable_ticks, enable_ticks, bcm_bit
 	SUB		enable_ticks, enable_ticks, enable_ticks0
@@ -113,7 +114,6 @@ ROW_LOOP:
 BLOCK_LOOP:	
 	LBCO		r1, DATA_BLOCK_PTR, block_offset, 32
 
-BIT_LOOP:
 	WRITE_SEGMENT_COLUMN_REG(1)
 	WRITE_SEGMENT_COLUMN_REG(2)
 	WRITE_SEGMENT_COLUMN_REG(3)
@@ -123,9 +123,10 @@ BIT_LOOP:
 	WRITE_SEGMENT_COLUMN_REG(7)
 	WRITE_SEGMENT_COLUMN_REG(8)
 
+	
 	ADD		block_offset, block_offset, 32
 	QBLT		INCREMENT_BLOCK, block_offset, 255
-	QBA		CONTINUE_BIT
+	QBA		NEXT_BLOCK
 
 INCREMENT_BLOCK:
 	ADD		block_address, block_address, 1
@@ -134,7 +135,7 @@ INCREMENT_BLOCK:
 	DELAY	100
 
 
-CONTINUE_BIT:
+NEXT_BLOCK:
 	ADD		column_counter, column_counter, 1
 	QBGT		BLOCK_LOOP, column_counter, num_columns
 
@@ -169,10 +170,25 @@ RENDER_DONE:
 	QBEQ	LOAD_FRAME, status, STATUS_NEW_FRAME
 	QBEQ	RENDER, status, STATUS_RENDER
 
-//	MOV		scratch, 
+	MOV		scratch, block_address
 	DELAY	100
 EXIT:	
 	SET		r30, BLANK_BIT
+
+	LDI	csel_counter, 0
+	INIT_GPIO1
+	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
+	COMMIT_GPIO1
+	DELAY		100
+	LDI	csel_counter, 7
+	INIT_GPIO1
+	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
+	COMMIT_GPIO1
+
 //	CLR		r30, BLANK_BIT
 
 	RESET_RAM_BLOCK_PTR

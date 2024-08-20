@@ -71,17 +71,26 @@ static void* network_thread(void *_) {
 
 			printf("received %d bytes: %c\n", n, (char) buffer[0]);
 			bool ok = true;
+			uint16_t size;
+			
 			switch (buffer[0]) {
 			case 'D':
-				if (buffer[2] == g_rows && buffer[1] == g_cols) {
-					memcpy(g_data, buffer + 3, g_rows * g_cols * SEGMENTS_IN_BLOCK);
-					puts("writing data");
-					g_status = RENDERER_NEW_FRAME;
-				} else {
-					printf("size mismatch %d %d, %d, %d\n",
-						   (int) buffer[2], g_rows, (int) buffer[1], g_cols);
-					ok = false;
-				}
+				size = buffer[2];
+				size <<= 8;
+				size |= buffer[1];
+				memcpy(g_data, buffer + 3, size);
+				puts("writing data");
+				g_status = RENDERER_NEW_FRAME;
+				
+				/* if (buffer[2] == g_rows && buffer[1] == g_cols) { */
+				/* 	memcpy(g_data, buffer + 3, g_rows * g_cols * SEGMENTS_IN_BLOCK); */
+				/* 	puts("writing data"); */
+				/* 	g_status = RENDERER_NEW_FRAME; */
+				/* } else { */
+				/* 	printf("size mismatch %d %d, %d, %d\n", */
+				/* 		   (int) buffer[2], g_rows, (int) buffer[1], g_cols); */
+				/* 	ok = false; */
+				/* } */
 				break;
 			case 'B':
 				g_value = buffer[1];

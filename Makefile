@@ -8,7 +8,7 @@ all: build/segment-block.bin
 build/segment-block.bin: pru/segment-block.p
 	cpp -Iinclude $^ | perl -p -e 's/^#.*//; s/;/\n/g;' >$^_
 	pasm -V3 -b $^_
-	rm $^_
+	# rm $^_
 	mv segment-block.bin $@
 
 clean:

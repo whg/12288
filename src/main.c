@@ -128,31 +128,31 @@ int main(int argc, char *argv[]) {
 
 	 renderer_init(options.num_columns, options.num_rows);
 	 printf("rendering config: (%d, %d), %u enable ticks, %d bit depth\n",
-		  options.num_columns, options.num_rows,
-		  g_pru_ram->enable_ticks, (int) g_pru_ram->bit_depth);
+	 	  options.num_columns, options.num_rows,
+	 	  g_pru_ram->enable_ticks, (int) g_pru_ram->bit_depth);
 
 	 static int frame_num = 0;
 	 while (g_pru_ram->status != STATUS_EXIT) {
-		 uint8_t *buffer = display_write_ptr();
-		 puts("waiting for frame");
-		 renderer_status_t status = renderer_write_frame(buffer);
-		 if (status == RENDERER_NEW_FRAME) {
-			 /* display_swap_buffers(); */
-			 g_pru_ram->buffer_addr = display_read_addr();
-			 g_pru_ram->buffer_offset = display_read_offset();
-			 g_pru_ram->status = STATUS_NEW_FRAME;
-		 }
-		 else if (status == RENDERER_BIT_DEPTH) {
-			 g_pru_ram->bit_depth = (uint8_t)renderer_get_value();
-			 printf("set bit depth to %d\n", (int) g_pru_ram->bit_depth);
-		 }
-		 else if (status == RENDERER_ENABLE_TICKS) {
-			 g_pru_ram->enable_ticks = renderer_get_value();
-			 printf("set enable ticks to %u\n", (int) g_pru_ram->enable_ticks);
-		 }
-		 //	 usleep(1000000 / 3);
-		 printf("%d\n", ++frame_num);
-		 //		 stop();
+	 	 uint8_t *buffer = display_write_ptr();
+	 	 puts("waiting for frame");
+	 	 renderer_status_t status = renderer_write_frame(buffer);
+	 	 if (status == RENDERER_NEW_FRAME) {
+	 		 /* display_swap_buffers(); */
+	 		 g_pru_ram->buffer_addr = display_read_addr();
+	 		 g_pru_ram->buffer_offset = display_read_offset();
+	 		 g_pru_ram->status = STATUS_NEW_FRAME;
+	 	 }
+	 	 else if (status == RENDERER_BIT_DEPTH) {
+	 		 g_pru_ram->bit_depth = (uint8_t)renderer_get_value();
+	 		 printf("set bit depth to %d\n", (int) g_pru_ram->bit_depth);
+	 	 }
+	 	 else if (status == RENDERER_ENABLE_TICKS) {
+	 		 g_pru_ram->enable_ticks = renderer_get_value();
+	 		 printf("set enable ticks to %u\n", (int) g_pru_ram->enable_ticks);
+	 	 }
+	 	 //	 usleep(1000000 / 3);
+	 	 printf("%d\n", ++frame_num);
+	 	 //		 stop();
 	 }
 
 
