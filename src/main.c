@@ -14,9 +14,12 @@
 #include "display.h"
 #include "renderer.h"
 
+uint8_t scrambled_bcm_bits5[] = {
+2, 0, 1, 4, 3, 0, 0, 0, 1, 4, 0, 2, 3, 0, 0, 0, 0, 2, 4, 1, 3, 0, 0, 0, 4, 3, 1, 2, 0, 0, 0, 0, 2, 0, 3, 4, 1, 0, 0, 0, 2, 0, 4, 1, 3, 0, 0, 0, 0, 4, 2, 3, 1, 0, 0, 0, 2, 1, 4, 0, 3, 0, 0, 0, 3, 2, 0, 4, 1, 0, 0, 0, 3, 0, 2, 4, 1, 0, 0, 0, 3, 4, 1, 2, 0, 0, 0, 0, 0, 3, 4, 1, 2, 0, 0, 0, 4, 3, 2, 0, 1, 0, 0, 0, 1, 3, 0, 4, 2, 0, 0, 0, 2, 3, 4, 0, 1, 0, 0, 0, 1, 4, 3, 0, 2, 0, 0, 0, 0, 3, 1, 4, 2, 0, 0, 0, 1, 0, 2, 4, 3, 0, 0, 0, 0, 1, 2, 4, 3, 0, 0, 0, 0, 4, 2, 1, 3, 0, 0, 0, 2, 0, 4, 3, 1, 0, 0, 0, 2, 3, 0, 4, 1, 0, 0, 0, 1, 0, 3, 4, 2, 0, 0, 0, 1, 3, 4, 2, 0, 0, 0, 0, 2, 4, 1, 0, 3, 0, 0, 0, 4, 0, 1, 3, 2, 0, 0, 0, 3, 1, 2, 4, 0, 0, 0, 0, 1, 3, 0, 2, 4, 0, 0, 0, 4, 2, 3, 0, 1, 0, 0, 0, 1, 4, 0, 3, 2, 0, 0, 0, 0, 2, 1, 4, 3, 0, 0, 0, 3, 1, 2, 0, 4, 0, 0, 0, 4, 0, 2, 3, 1, 0, 0, 0, 0, 4, 3, 1, 2, 0, 0, 0, 1, 0, 4, 2, 3, 0, 0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 1, 2, 4, 3, 0, 0, 0, 0, 3, 0, 1, 2, 4, 0, 0, 0, 4, 2, 1, 3, 0, 0, 0, 0, 4, 3, 0, 1, 2, 0, 0, 0, 0, 4, 1, 2, 3, 0, 0, 0, 3, 4, 0, 2, 1, 0, 0, 0, 4, 2, 3, 1, 0, 0, 0, 0, 4, 1, 2, 0, 3, 0, 0, 0, 2, 4, 3, 0, 1, 0, 0, 0, 0, 1, 3, 2, 4, 0, 0, 0, 4, 2, 0, 1, 3, 0, 0, 0, 4, 0, 1, 2, 3, 0, 0, 0, 1, 4, 2, 0, 3, 0, 0, 0, 2, 1, 0, 3, 4, 0, 0, 0, 2, 4, 3, 1, 0, 0, 0, 0, 1, 3, 4, 0, 2, 0, 0, 0, 0, 3, 2, 4, 1, 0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 3, 2, 1, 4, 0, 0, 0, 0, 2, 4, 3, 1, 0, 0, 0, 1, 0, 4, 3, 2, 0, 0, 0, 3, 0, 2, 1, 4, 0, 0, 0, 1, 0, 2, 3, 4, 0, 0, 0, 3, 4, 0, 1, 2, 0, 0, 0, 1, 3, 2, 0, 4, 0, 0, 0, 4, 0, 3, 2, 1, 0, 0, 0, 0, 1, 3, 4, 2, 0, 0, 0, 0, 4, 1, 3, 2, 0, 0, 0, 1, 2, 3, 0, 4, 0, 0, 0, 1, 4, 3, 2, 0, 0, 0, 0, 0, 3, 1, 2, 4, 0, 0, 0, 1, 2, 0, 3, 4, 0, 0, 0, 3, 4, 1, 0, 2, 0, 0, 0, 3, 2, 0, 1, 4, 0, 0, 0, 4, 1, 2, 3, 0, 0, 0, 0, 3, 2, 1, 0, 4, 0, 0, 0, 1, 2, 4, 0, 3, 0, 0, 0, 2, 4, 0, 1, 3, 0, 0, 0, 3, 1, 4, 2, 0, 0, 0, 0, 4, 3, 0, 2, 1, 0, 0, 0, 3, 2, 1, 4, 0, 0, 0, 0, 2, 1, 3, 0, 4, 0, 0, 0, 0, 2, 3, 1, 4, 0, 0, 0, 1, 0, 3, 2, 4, 0, 0, 0, 2, 0, 3, 1, 4, 0, 0, 0, 2, 3, 4, 1, 0, 0, 0, 0, 4, 1, 0, 3, 2, 0, 0, 0, 3, 4, 2, 0, 1, 0, 0, 0, 4, 3, 1, 0, 2, 0, 0, 0, 2, 3, 1, 4, 0, 0, 0, 0, 2, 1, 4, 3, 0, 0, 0, 0, 4, 2, 0, 3, 1, 0, 0, 0, 3, 0, 4, 2, 1, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 0, 2, 4, 0, 3, 1, 0, 0, 0, 3, 0, 1, 4, 2, 0, 0, 0, 2, 4, 1, 3, 0, 0, 0, 0, 3, 1, 0, 4, 2, 0, 0, 0, 3, 1, 4, 0, 2, 0, 0, 0, 0, 1, 4, 2, 3, 0, 0, 0, 0, 2, 1, 3, 4, 0, 0, 0, 2, 3, 1, 0, 4, 0, 0, 0, 3, 4, 2, 1, 0, 0, 0, 0, 0, 1, 2, 3, 4, 0, 0, 0, 2, 1, 3, 4, 0, 0, 0, 0, 4, 0, 3, 1, 2, 0, 0, 0, 4, 2, 1, 0, 3, 0, 0, 0, 0, 3, 4, 2, 1, 0, 0, 0, 0, 1, 4, 3, 2, 0, 0, 0, 2, 3, 0, 1, 4, 0, 0, 0, 3, 2, 4, 1, 0, 0, 0, 0, 3, 2, 4, 0, 1, 0, 0, 0, 1, 4, 2, 3, 0, 0, 0, 0, 0, 2, 3, 4, 1, 0, 0, 0, 4, 1, 3, 0, 2, 0, 0, 0, 1, 3, 2, 4, 0, 0, 0, 0, 4, 1, 0, 2, 3, 0, 0, 0, 3, 1, 0, 2, 4, 0, 0, 0, 4, 0, 2, 1, 3, 0, 0, 0, 2, 1, 0, 4, 3, 0, 0, 0, 3, 0, 4, 1, 2, 0, 0, 0, 4, 1, 3, 2, 0, 0, 0, 0, 1, 2, 0, 4, 3, 0, 0, 0, 2, 0, 1, 3, 4, 0, 0, 0 };
+
 typedef struct {
 	 uint8_t status, num_columns, num_rows, bit_depth;
-	 uint16_t buffer_addr, buffer_offset;
+	 uint16_t bcm_bits_buffer_addr, bcm_bits_buffer_offset;
 	 uint32_t enable_ticks;
 	 uint32_t scratch;
 } __attribute__((__packed__)) pru_ram_data_t;
@@ -103,24 +106,17 @@ int main(int argc, char *argv[]) {
 	 prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, (void**) &g_pru_ram);
 	 prussdrv_map_prumem(PRUSS0_SHARED_DATARAM, (void**) &shared_ram);
 
-	 uint32_t ram0_offset = sizeof(pru_ram_data_t);
-	 display_set_buffer(0, ((uint8_t*) g_pru_ram) + ram0_offset, 0, ram0_offset);
-	 display_set_buffer(1, shared_ram, 0x100, 0);
-
 	 g_pru_ram->status = STATUS_NONE;
 	 g_pru_ram->num_columns = options.num_columns;
 	 g_pru_ram->num_rows = options.num_rows;
 	 g_pru_ram->bit_depth = options.bit_depth;
-	 g_pru_ram->buffer_addr = display_read_addr();
+	 g_pru_ram->bcm_bits_buffer_addr = 1;
+	 g_pru_ram->bcm_bits_buffer_offset = 0;
 	 g_pru_ram->enable_ticks = options.enable_ticks;
 	 g_pru_ram->scratch = 0;
 
-	 display_configure(options.num_columns, options.num_rows);
-	 display_use_buffer(1);
-
-	 g_pru_ram->buffer_addr = display_read_addr();
-	 g_pru_ram->buffer_offset = display_read_offset();
-
+	 memcpy(g_pru_ram + 0xff, scrambled_bcm_bits5, sizeof(scrambled_bcm_bits5));
+	 
 	 int exec_fail = prussdrv_exec_program(PRU0, "./build/segment-block.bin");
 	 if (exec_fail) {
 		 die("can't exec pru program");
@@ -133,13 +129,9 @@ int main(int argc, char *argv[]) {
 
 	 static int frame_num = 0;
 	 while (g_pru_ram->status != STATUS_EXIT) {
-	 	 uint8_t *buffer = display_write_ptr();
 	 	 puts("waiting for frame");
-	 	 renderer_status_t status = renderer_write_frame(buffer);
+	 	 renderer_status_t status = renderer_write_frame(shared_ram);
 	 	 if (status == RENDERER_NEW_FRAME) {
-	 		 /* display_swap_buffers(); */
-	 		 g_pru_ram->buffer_addr = display_read_addr();
-	 		 g_pru_ram->buffer_offset = display_read_offset();
 	 		 g_pru_ram->status = STATUS_NEW_FRAME;
 	 	 }
 	 	 else if (status == RENDERER_BIT_DEPTH) {

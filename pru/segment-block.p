@@ -7,8 +7,8 @@
 #define num_columns	ram_bits.b1
 #define num_rows	ram_bits.b2
 #define bit_depth	ram_bits.b3
-#define read_buffer_addr r19.w0
-#define read_buffer_offset r19.w2
+#define bcm_bits_buffer_addr r19.w0
+#define bcm_bits_buffer_offset r19.w2
 #define enable_ticks0 r20
 #define scratch r21
 #define RAM_BITS_LENGTH 16
@@ -28,15 +28,6 @@
 #define CSEL0_GPIO1_BIT	11
 #define CSEL1_GPIO1_BIT	9
 #define CSEL2_GPIO1_BIT	10
-
-// #define WRITE_DATA(channel, value, bit) 	\
-// 	QBBC 	DATA_CLR_##channel, value, bit; \
-// 	SET	r30, DATA_##channel##_BIT; 			\
-// 	QBA	DATA_END_##channel;   				\
-// DATA_CLR_##channel:; 						\
-// 	CLR	r30, DATA_##channel##_BIT; 			\
-// 	QBA	DATA_END_##channel; 				\
-// DATA_END_##channel:
 
 #define WRITE_SEGMENT_COLUMN(reg, byte) 			\
 	CLR		r30, CLK_BIT; 				\
@@ -61,24 +52,25 @@ SET_CLK##reg##byte:; 						\
 #define bits_in_row		r17.w2
 #define enable_ticks	r16
 #define block_address		r15
-#define block_address0		r14.w0
-#define block_offset0		r14.w2
+#define bcm_bits_address	r14.w0
+#define bcm_bits_offset		r14.w1	
 #define block_offset		r13.w0
-#define bcm_bit			r13.b2
+#define bcm_bit_counter		r13.b2
 #define csel_counter	r13.b3
-
+#define bcm_bit		r12.b0
+	
 .origin 0
 .entrypoint START
 
 START:
 	ENABLE_OCP_MASTER_PORT
-	RESET_RAM_BLOCK_PTR
+	RAMBLK	0
 	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 
 	MULT	num_columns, BITS_IN_BLOCK, bits_in_row
 
-	CLR		r30, LATCH_BIT
-	SET		r30, BLANK_BIT
+	CLR	r30, LATCH_BIT
+	SET	r30, BLANK_BIT
 
 WAIT_FOR_FRAME:
 	LBCO	status, DATA_BLOCK_PTR, 0, 1
@@ -87,32 +79,45 @@ WAIT_FOR_FRAME:
 	QBEQ	WAIT_FOR_FRAME, status, STATUS_NONE
 
 LOAD_FRAME:
-	// store values here, we don't switch buffers mid BCM
-	RESET_RAM_BLOCK_PTR
+	RAMBLK 	0
 	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
-	MOV		block_address0, read_buffer_addr
-	MOV		block_offset0, read_buffer_offset
+
+// 	MOV	bcm_bits_address, bcm_bits_buffer_addr
+// 	MOV	bcm_bits_offset, bcm_bits_buffer_offset
+	
+// 	RAMBLK 	bcm_bits_address
+// 	LBCO	r3, DATA_BLOCK_PTR, bcm_bits_offset, 8
+	
+// 	ADD	bcm_bits_offset, bcm_bits_offset, 8
+// 	QBLT	INCREMENT_BCM_BITS_ADDRESS, bcm_bits_offset, 0xff
+// 	QBA	NEXT_BLOCK
+
+// INCREMENT_BCM_BITS_ADDRESS:
+// 	ADD	bcm_bits_address, bcm_bits_address, 1
+// 	AND	bcm_bits_offset, bcm_bits_offset, 0xff
 
 RENDER:
-	MOV		bcm_bit, 0
+	MOV	bcm_bit_counter, 0
 
- 	MOV		block_offset, block_offset0
-	MOV		block_address, block_address0
-	SET_RAM_BLOCK_PTR block_address
+	
+	
+ 	LDI	block_offset, 0
+	LDI	block_address, 0x100
+	RAMBLK 	block_address
 	DELAY	60
 BCM_LOOP:
-	MOV		enable_ticks, enable_ticks0
-	LSL		enable_ticks, enable_ticks, bcm_bit
-	SUB		enable_ticks, enable_ticks, enable_ticks0
-	ADD		enable_ticks, enable_ticks, 1
-	MOV		csel_counter, 0
+	MOV	enable_ticks, enable_ticks0
+	LSL	enable_ticks, enable_ticks, bcm_bit_counter
+	SUB	enable_ticks, enable_ticks, enable_ticks0
+	ADD	enable_ticks, enable_ticks, 1
+	MOV	csel_counter, 0
 
 
 ROW_LOOP:
-	MOV		column_counter, 0
+	MOV	column_counter, 0
 	
 BLOCK_LOOP:	
-	LBCO		r1, DATA_BLOCK_PTR, block_offset, 32
+	LBCO	r1, DATA_BLOCK_PTR, block_offset, 32
 
 	WRITE_SEGMENT_COLUMN_REG(1)
 	WRITE_SEGMENT_COLUMN_REG(2)
@@ -124,23 +129,23 @@ BLOCK_LOOP:
 	WRITE_SEGMENT_COLUMN_REG(8)
 
 	
-	ADD		block_offset, block_offset, 32
-	QBLT		INCREMENT_BLOCK, block_offset, 255
-	QBA		NEXT_BLOCK
+	ADD	block_offset, block_offset, 32
+	QBLT	INCREMENT_BLOCK, block_offset, 255
+	QBA	NEXT_BLOCK
 
 INCREMENT_BLOCK:
-	ADD		block_address, block_address, 1
-	SET_RAM_BLOCK_PTR block_address
-	AND		block_offset, block_offset, 255
+	ADD	block_address, block_address, 1
+	RAMBLK 	block_address
+	AND	block_offset, block_offset, 255
 	DELAY	100
 
 
 NEXT_BLOCK:
-	ADD		column_counter, column_counter, 1
-	QBGT		BLOCK_LOOP, column_counter, num_columns
+	ADD	column_counter, column_counter, 1
+	QBGT	BLOCK_LOOP, column_counter, num_columns
 
 ROW_DONE:
-	SET		r30, BLANK_BIT
+	SET	r30, BLANK_BIT
 
 	INIT_GPIO1
 	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
@@ -148,29 +153,28 @@ ROW_DONE:
 	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
 	COMMIT_GPIO1
 
-	SET		r30, LATCH_BIT
+	SET	r30, LATCH_BIT
 	DELAY	3
-	CLR		r30, LATCH_BIT
+	CLR	r30, LATCH_BIT
 
-	CLR		r30, BLANK_BIT
+	CLR	r30, BLANK_BIT
 	DELAY	enable_ticks	
-//	SET		r30, BLANK_BIT
 	
-	ADD		csel_counter, csel_counter, 1
+	ADD	csel_counter, csel_counter, 1
 	QBGT	ROW_LOOP, csel_counter, COMMON_OUTPUTS
 
 CSEL_DONE:
-	ADD		bcm_bit, bcm_bit, 1
-	QBGT	BCM_LOOP, bcm_bit, bit_depth
+	ADD	bcm_bit_counter, bcm_bit_counter, 1
+	QBGT	BCM_LOOP, bcm_bit_counter, bit_depth
 
 
 RENDER_DONE:
-	RESET_RAM_BLOCK_PTR
+	RAMBLK 0
 	LBCO	status, DATA_BLOCK_PTR, 0, 1
 	QBEQ	LOAD_FRAME, status, STATUS_NEW_FRAME
 	QBEQ	RENDER, status, STATUS_RENDER
 
-	MOV		scratch, block_address
+	MOV		scratch, 0
 	DELAY	100
 EXIT:	
 	SET		r30, BLANK_BIT
@@ -191,7 +195,7 @@ EXIT:
 
 //	CLR		r30, BLANK_BIT
 
-	RESET_RAM_BLOCK_PTR
+	RAMBLK 0
 	SBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 
 	DELAY	50000

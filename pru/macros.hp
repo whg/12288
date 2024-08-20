@@ -23,13 +23,9 @@ LOOP:
 	SBCO	r25, C4, 4, 4
 .endm
 
-.macro SET_RAM_BLOCK_PTR
+.macro RAMBLK
 .mparam p
 	MOV		r25, p
 	MOV		r26, CTPPR_0
 	SBBO	r25, r26, 0, 4
-.endm
-
-.macro RESET_RAM_BLOCK_PTR
-	SET_RAM_BLOCK_PTR 0
 .endm
