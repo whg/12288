@@ -52,8 +52,7 @@ WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 				\
 #define bits_in_row		r17.w2
 #define enable_ticks	r16
 #define block_address		r15
-#define bcm_bits_address	r14.w0
-#define bcm_bits_offset		r14.w1	
+#define dither_counter		r14
 #define block_offset		r13.w0
 #define bcm_bit_counter		r13.b2
 #define csel_counter	r13.b3
@@ -72,18 +71,24 @@ START:
 	CLR	r30, LATCH_BIT
 	SET	r30, BLANK_BIT
 
+	LDI	dither_counter, 0
+
+	
 WAIT_FOR_FRAME:
 	LBCO	status, DATA_BLOCK_PTR, 0, 1
 	DELAY	65000
 	QBEQ	EXIT, status, STATUS_EXIT
 	QBEQ	WAIT_FOR_FRAME, status, STATUS_NONE
 
+
 LOAD_FRAME:
 	RAMBLK 	0
 	LBCO	ram_bits, DATA_BLOCK_PTR, 0, RAM_BITS_LENGTH
 
+	
 RENDER:
 	MOV	csel_counter, 0
+	XOR	dither_counter, dither_counter, 1
 	
 CSEL_LOOP:
 	INIT_GPIO1
@@ -93,9 +98,15 @@ CSEL_LOOP:
 	COMMIT_GPIO1
 	
 	MOV	bcm_bit_counter, 0
-	
- 	LDI	block_offset, 0
+
+	QBEQ	DITHER_DATA_A, dither_counter, 0
+	QBEQ	DITHER_DATA_B, dither_counter, 1
+DITHER_DATA_A:
+	LDI	block_address, 0x1
+	QBA	SET_BLOCK_ADDRESS
+DITHER_DATA_B:
 	LDI	block_address, 0x100
+SET_BLOCK_ADDRESS:
 	RAMBLK 	block_address
 	DELAY	60
 	
@@ -160,7 +171,7 @@ RENDER_DONE:
 	RAMBLK 	0x3f
 	LBCO	r0, DATA_BLOCK_PTR, 252, 4
 	
-	MOV	scratch, r0
+	MOV	scratch, dither_counter
 	DELAY	100
 EXIT:	
 	SET	r30, BLANK_BIT

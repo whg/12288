@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 	 g_pru_ram->status = STATUS_NONE;
 	 g_pru_ram->num_columns = options.num_columns;
 	 g_pru_ram->num_rows = options.num_rows;
-	 g_pru_ram->bit_depth = options.bit_depth;
+	 g_pru_ram->bit_depth = options.bit_depth - 1;
 	 g_pru_ram->bcm_bits_buffer_addr = 1;
 	 g_pru_ram->bcm_bits_buffer_offset = 0;
 	 g_pru_ram->enable_ticks = options.enable_ticks;
@@ -117,23 +117,31 @@ int main(int argc, char *argv[]) {
 
 	 memcpy(g_pru_ram + 0xff, scrambled_bcm_bits5, sizeof(scrambled_bcm_bits5));
 
-	 uint32_t *v = ((uint8_t *)g_pru_ram) + 0x1000 + 0x3000 - 4;
-	 *v = 1234;
+	 /* uint32_t *v = ((uint8_t *)g_pru_ram) + 0x1000 + 0x3000 - 4; */
+	 /* *v = 1234; */
 	 
 	 int exec_fail = prussdrv_exec_program(PRU0, "./build/segment-block.bin");
 	 if (exec_fail) {
 		 die("can't exec pru program");
 	 }
 
-	 renderer_init(options.num_columns, options.num_rows);
+	 renderer_init(options.num_columns, options.num_rows, options.bit_depth);
 	 printf("rendering config: (%d, %d), %u enable ticks, %d bit depth\n",
 	 	  options.num_columns, options.num_rows,
 	 	  g_pru_ram->enable_ticks, (int) g_pru_ram->bit_depth);
 
+	 uint8_t tmp[12288];
+	 uint8_t *data0 = (uint8_t *)g_pru_ram + 0x100;
+	 uint8_t *data1 = shared_ram;
+
+	 memset(data0, 0, 12288);
+	 memset(data1, 0, 12288);
+	 
 	 static int frame_num = 0;
+	 int data_size = 256 * options.num_columns * options.bit_depth;
 	 while (g_pru_ram->status != STATUS_EXIT) {
-	 	 puts("waiting for frame");
-	 	 renderer_status_t status = renderer_write_frame(shared_ram);
+	 	 printf("waiting for frame %p %p\n", data0, data1);
+	 	 renderer_status_t status = renderer_write_frame(data0, data1);
 	 	 if (status == RENDERER_NEW_FRAME) {
 	 		 g_pru_ram->status = STATUS_NEW_FRAME;
 	 	 }

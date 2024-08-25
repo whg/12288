@@ -9,8 +9,8 @@ typedef enum {
 	RENDERER_ENABLE_TICKS,
 } renderer_status_t;
 
-void renderer_init(int cols, int rows);
-renderer_status_t renderer_write_frame();
+void renderer_init(int cols, int rows, int bit_depth);
+renderer_status_t renderer_write_frame(uint8_t *data0, uint8_t *data1);
 uint32_t renderer_get_value();
 void renderer_stop();
 void renderer_close();
