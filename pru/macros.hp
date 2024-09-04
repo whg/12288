@@ -19,7 +19,7 @@ LOOP:
 
 .macro ENABLE_OCP_MASTER_PORT
 	LBCO	r25, C4, 4, 4
-	CLR		r25, 4
+	CLR	r25, 4
 	SBCO	r25, C4, 4, 4
 .endm
 

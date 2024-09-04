@@ -29,34 +29,35 @@
 #define CSEL1_GPIO1_BIT	9
 #define CSEL2_GPIO1_BIT	10
 
-#define WRITE_SEGMENT_COLUMN(reg, byte) 			\
-	CLR		r30, CLK_BIT; 				\
-	MOV		r0, r##reg.b##byte; 			\
-	QBBC		SET_CLK##reg##byte, r0, 7; 		\
-	SET		r0, DATA_2_BIT; 			\
-	QBA		WRITE_SEGMENT_COLUMN_DONE##reg##byte; 	\
-SET_CLK##reg##byte:; 						\
-	SET		r0, CLK_BIT; 				\
-WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 				\
-	MOV		r30, r0; 				\	
-	NOP0		r0, r0, r0
+#define WRITE_SEGMENT_COLUMN(reg, byte) 		\
+	CLR	r30, CLK_BIT; 				\
+	MOV	r0, r##reg.b##byte; 			\
+	QBBC	SET_CLK##reg##byte, r0, 7; 		\
+	SET	r0, DATA_2_BIT; 			\
+	QBA	WRITE_SEGMENT_COLUMN_DONE##reg##byte; 	\
+SET_CLK##reg##byte:; 					\
+	SET	r0, CLK_BIT; 				\
+WRITE_SEGMENT_COLUMN_DONE##reg##byte:; 			\
+	MOV	r30, r0; 				\	
+	DELAY	1
 	
-#define WRITE_SEGMENT_COLUMN_REG(reg) 				\
-	WRITE_SEGMENT_COLUMN(reg, 0); 				\
-	WRITE_SEGMENT_COLUMN(reg, 1); 				\
-	WRITE_SEGMENT_COLUMN(reg, 2); 				\
+#define WRITE_SEGMENT_COLUMN_REG(reg) 			\
+	WRITE_SEGMENT_COLUMN(reg, 0); 			\
+	WRITE_SEGMENT_COLUMN(reg, 1); 			\
+	WRITE_SEGMENT_COLUMN(reg, 2); 			\
 	WRITE_SEGMENT_COLUMN(reg, 3)
 
 	
 #define column_counter		r17.w0
 #define bits_in_row		r17.w2
-#define enable_ticks	r16
+#define enable_ticks		r16
 #define block_address		r15
 #define dither_counter		r14
 #define block_offset		r13.w0
 #define bcm_bit_counter		r13.b2
-#define csel_counter	r13.b3
-#define bcm_bit		r12.b0
+#define csel_counter		r13.b3
+#define bcm_bit			r12.b0
+#define csel_set		r12.b1
 	
 .origin 0
 .entrypoint START
@@ -88,35 +89,33 @@ LOAD_FRAME:
 	
 RENDER:
 	MOV	csel_counter, 0
-	XOR	dither_counter, dither_counter, 1
+	LDI	csel_set, COMMON_OUTPUTS
 	
-CSEL_LOOP:
-	INIT_GPIO1
-	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
-	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
-	COMMIT_GPIO1
-	
-	MOV	bcm_bit_counter, 0
-
 	QBEQ	DITHER_DATA_A, dither_counter, 0
 	QBEQ	DITHER_DATA_B, dither_counter, 1
 DITHER_DATA_A:
-	LDI	block_address, 0x1
+	LDI	block_address, 0x001
 	QBA	SET_BLOCK_ADDRESS
 DITHER_DATA_B:
 	LDI	block_address, 0x100
+
 SET_BLOCK_ADDRESS:
 	RAMBLK 	block_address
-	DELAY	60
+	LDI	block_offset, 0
 	
+	XOR	dither_counter, dither_counter, 1
+	
+CSEL_LOOP:
+	
+	MOV	bcm_bit_counter, 0
+
 BCM_LOOP:
+	MOV	column_counter, 0
+	
 	MOV	enable_ticks, enable_ticks0
 	LSL	enable_ticks, enable_ticks, bcm_bit_counter
 	SUB	enable_ticks, enable_ticks, enable_ticks0
 	ADD	enable_ticks, enable_ticks, 1
-
-	MOV	column_counter, 0
 
 	
 BLOCK_LOOP:	
@@ -146,8 +145,21 @@ NEXT_BLOCK:
 	QBGT	BLOCK_LOOP, column_counter, num_columns
 
 ROW_DONE:
+
+	QBEQ	LATCH, csel_set, csel_counter
+	
+SET_CSEL:
 	SET	r30, BLANK_BIT
 
+	INIT_GPIO1
+	WRITE_GPIO1	csel_counter, 0, CSEL0_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 1, CSEL1_GPIO1_BIT
+	WRITE_GPIO1	csel_counter, 2, CSEL2_GPIO1_BIT
+	COMMIT_GPIO1
+
+	MOV	csel_set, csel_counter
+	
+LATCH:	
 	SET	r30, LATCH_BIT
 	DELAY	3
 	CLR	r30, LATCH_BIT

@@ -71,6 +71,7 @@ static void* network_thread(void *_) {
 				die("recv error");
 
 			printf("received %d bytes: %c\n", n, (char) buffer[0]);
+			
 			bool ok = true;
 			uint16_t size;
 			uint8_t *d;
@@ -80,15 +81,14 @@ static void* network_thread(void *_) {
 			int k;
 			
 			switch (buffer[0]) {
-			case 'D':
+			case 'F':
 				size = buffer[2];
 				size <<= 8;
 				size |= buffer[1];
 				d = buffer + 3;
-				memset(g_data0, 0, 12288);
 
-				memcpy(g_data0, d, 12288);
-				memcpy(g_data1, d + 12288, 12288);
+				memcpy(g_data0, d, 10240);
+				memcpy(g_data1, d + 10240, 10240);
 				
 				/* for (int csel = 0; csel < 8; csel++) { */
 				/* 	k = csel * csel_step; */
@@ -104,10 +104,6 @@ static void* network_thread(void *_) {
 				/* 	} */
 				/* } */
 
-				printf("size = %d\n", size);
-				/* memcpy(g_data, buffer + 3, size); */
-//				memcpy(g_data1, d, size);
-				puts("writing data");
 				g_status = RENDERER_NEW_FRAME;
 				
 				/* if (buffer[2] == g_rows && buffer[1] == g_cols) { */
@@ -130,6 +126,7 @@ static void* network_thread(void *_) {
 				break;
 
 			default:
+				printf("unknown %c\n", buffer[0]);
 				ok = false;
 			}
 				
